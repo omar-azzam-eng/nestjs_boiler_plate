@@ -1,11 +1,5 @@
 import { BaseModel } from 'src/utils/base-model';
-import {
-  BeforeInsert,
-  BeforeUpdate,
-  Column,
-  Entity,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
 
@@ -28,8 +22,7 @@ export class UserEntity extends BaseModel {
   name: string;
   @Column({ nullable: true })
   phone: string;
-  @BeforeInsert()
-  @BeforeUpdate()
+
   private async _hashPassword() {
     if (this.password) {
       this.password = await UserEntity.hashPassword(this.password);

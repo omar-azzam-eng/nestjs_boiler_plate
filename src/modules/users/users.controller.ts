@@ -15,11 +15,7 @@ export class UsersController {
     data: UpdateUserDTO,
     @User() { id }: AuthUser,
   ): Promise<UserResponseDTO> {
-    const user = await this.usersService.updateUser(id, {
-      password: data.password,
-      name: data.name,
-      phone: data.phone,
-    });
+    const user = await this.usersService.updateUser(id, data);
     return new UserResponseDTO(user.id, user.email, user.name, user.phone);
   }
 

@@ -19,9 +19,10 @@ export class UsersService {
   ) {}
 
   async createUser(data: CreateUserDTO, role: UserRoleEnum): Promise<string> {
+    const password = await UserEntity.hashPassword(data.password);
     const user = this.usersRepository.create({
       email: data.email,
-      password: data.password,
+      password: password,
       name: data.name,
       phone: data.phone,
       role: role,
@@ -73,6 +74,12 @@ export class UsersService {
   }
 
   async updateUser(id: string, data: UpdateUserDTO): Promise<UserEntity> {
+    const definedData = Object.fromEntries(
+      Object.entries(data).filter(([, value]) => value !== undefined),
+    );
+    if (Object.keys(definedData).length === 0) {
+      throw new BadRequestException('No fields provided for update');
+    }
     const updates = {
       ...data,
       ...(data.password

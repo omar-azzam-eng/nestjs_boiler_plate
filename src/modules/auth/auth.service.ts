@@ -78,6 +78,11 @@ export class AuthService {
   }
 
   async refresh(id: string, role: UserRoleEnum) {
+    const user = await this.usersService.getUserById(id);
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
     return await this.generateToken(id, role);
   }
 }
