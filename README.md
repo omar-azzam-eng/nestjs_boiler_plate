@@ -1,70 +1,157 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# NestJS Boilerplate
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A modular NestJS REST API starter built with TypeScript, PostgreSQL, TypeORM, JWT authentication, role-based authorization, request validation, Swagger dependencies, and Jest.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+> **Status:** starter template, not yet production-ready. Review the security and testing notes below before deploying it.
 
-## Description
+## Features
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- NestJS 11 and TypeScript
+- PostgreSQL persistence through TypeORM
+- Environment-based configuration with required-value and JWT-secret checks
+- Signup and signin endpoints
+- JWT access and refresh tokens
+- Public-route and refresh-route decorators
+- Role-based authorization guard
+- User profile read/update endpoints
+- DTO validation through a global `ValidationPipe`
+- Helmet security headers and configurable CORS origins
+- TypeORM migrations
+- Jest unit-test and Supertest end-to-end test tooling
 
-## Project setup
+## Requirements
 
-```bash
-$ npm install
-```
+- Node.js compatible with your installed NestJS 11 toolchain
+- npm
+- PostgreSQL
+- A configured `.env` file
 
-## Compile and run the project
+## Getting started
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
+git clone https://github.com/omar-azzam-eng/nestjs_boiler_plate.git
+cd nestjs_boiler_plate
+npm ci
+cp .env.example .env
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Edit `.env` and set a local PostgreSQL database and two **different** high-entropy JWT secrets. Generate secrets, for example:
 
-## Resources
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+Use a different generated value for each secret. Do not commit `.env`.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```dotenv
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=replace-me
+POSTGRES_DB=boilerplate
+CORS_ORIGINS=http://localhost:5173
+JWT_SECRET=replace-with-a-long-random-secret
+JWT_REFRESH_SECRET=replace-with-a-different-long-random-secret
+```
 
-## Support
+Run migrations before starting the API:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+npm run migration:run
+```
 
-## Stay in touch
+Development and production commands:
 
-- Author - [Omar Azzam](https://omar-azzam-eng.github.io/Portfolio/)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+npm run start:dev
+npm run build
+npm run start:prod
+```
+
+The app listens on `0.0.0.0` and uses `PORT` if set, otherwise `3000`.
+
+## API overview
+
+| Method | Route | Purpose | Authentication |
+|---|---|---|---|
+| `GET` | `/auth/health` | Basic health response | Public |
+| `POST` | `/auth/signup` | Create a customer account | Public |
+| `POST` | `/auth/signin` | Sign in and issue tokens | Public |
+| `GET` | `/auth/refresh` | Issue a new token pair | Refresh token |
+| `GET` | `/users` | Get the current user's profile | Access token |
+| `PUT` | `/users` | Update the current user's profile | Access token |
+
+Authentication uses `Authorization: Bearer <token>`. The token response currently contains `token` and `refreshToken`.
+
+Example signup request:
+
+```bash
+curl -X POST http://localhost:3000/auth/signup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"person@example.com","password":"ReplaceWithAStrongPassword123!"}'
+```
+
+DTO validation rules apply; use a strong password and a valid email address. Phone validation currently defaults to Syria (`SY`).
+
+## Project structure
+
+```text
+src/
+├── app.module.ts
+├── main.ts
+├── config/
+│   ├── config.module.ts
+│   ├── config.service.ts
+│   └── dtos/
+├── migrations/
+├── modules/
+│   ├── auth/
+│   │   ├── decorators/
+│   │   ├── dtos/
+│   │   ├── guards/
+│   │   ├── auth.controller.ts
+│   │   ├── auth.model.ts
+│   │   ├── auth.module.ts
+│   │   └── auth.service.ts
+│   └── users/
+│       ├── dtos/
+│       ├── entities/
+│       ├── users.controller.ts
+│       ├── users.module.ts
+│       └── users.service.ts
+├── types/
+└── utils/
+test/
+└── app.e2e-spec.ts
+```
+
+## Tests
+
+Run the existing test commands:
+
+```bash
+npm test
+npm run test:watch
+npm run test:cov
+npm run test:e2e
+```
+
+The test additions in this review pack are provided as a patch-style folder overlay. Copy the included `src/**/*.spec.ts` files into the matching paths in your repository and copy `test/app.e2e-spec.ts` to replace the starter smoke test. Run unit tests separately from e2e tests. The included e2e tests build a lightweight testing module with mocked services and do not require a live PostgreSQL database.
+
+The repository's Jest unit configuration uses `rootDir: "src"` and `testRegex: ".*\\.spec\\.ts$"`. E2E tests use `test/jest-e2e.json`. Keep those configurations aligned with the test file locations.
+
+## Important limitations to address
+
+- Refresh tokens are stateless and are not stored, rotated against a persisted session, or revocable. A stolen refresh token remains usable until expiration.
+- Consider changing refresh from `GET /auth/refresh` to `POST /auth/refresh`.
+- There is no visible rate limiting for signup/signin/refresh. Add throttling at the application, reverse-proxy, or API-gateway layer.
+- Review role changes and account deactivation: current JWT role claims may remain valid until token expiration.
+- Add pagination to any future list endpoint and avoid returning sensitive entity fields from service/controller responses.
+- Keep `synchronize: false` in production and use reviewed migrations.
+- Configure a restrictive production CORS allow-list; never assume CORS is an authentication control.
+- Add CI that runs lint, build, unit tests, and e2e tests on pull requests.
+- Check dependency advisories and update dependencies deliberately.
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+The upstream package currently declares `UNLICENSED`. Choose and add an explicit license before distributing or inviting external contributions.

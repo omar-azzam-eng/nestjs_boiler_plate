@@ -6,14 +6,10 @@ import { SigninDTO } from './dtos/signin.dto';
 import { User } from './decorators/auth.decorator';
 import { Refresh } from './decorators/refresh.decorator';
 import type { AuthUser } from './auth.model';
-import { ConfigService } from 'src/config/config.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private authService: AuthService,
-    private configService: ConfigService,
-  ) {}
+  constructor(private authService: AuthService) {}
 
   @Public()
   @Post('signup')
@@ -38,7 +34,7 @@ export class AuthController {
   }
 
   @Refresh()
-  @Get('refresh')
+  @Post('/auth/refresh')
   async refresh(@User() user: AuthUser) {
     const tokens = await this.authService.refresh(user.id, user.role);
     return tokens;
