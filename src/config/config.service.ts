@@ -1,43 +1,77 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { ConfigDTO } from './dtos/config.dto';
 
 @Injectable()
 export class ConfigService {
-  private env: ConfigDTO;
+  private readonly env: {
+    db: {
+      host: string;
+      port: number;
+      user: string;
+      password: string;
+      database: string;
+    };
+    auth: {
+      tokenSecret: string;
+      refreshTokenSecret: string;
+    };
+  };
 
   constructor() {
-    const env = {
-      db: {
-        host: process.env.POSTGRES_HOST,
-        port: parseInt(process.env.POSTGRES_PORT ?? '5432'),
-        user: process.env.POSTGRES_USER,
-        password: process.env.POSTGRES_PASSWORD,
-        database: process.env.POSTGRES_DB,
-      },
-      auth: {
-        tokenSecret: process.env.JWT_SECRET,
-        refreshTokenSecret: process.env.JWT_REFRESH_SECRET,
-      },
+    const required = (key: string): string => {
+      const value = process.env[key]?.trim();
+
+      if (!value) {
+        throw new InternalServerErrorException(
+          `Missing required environment variable: ${key}`,
+        );
+      }
+
+      return value;
     };
 
-    for (const key in env.db) {
-      if (!env.db[key as keyof typeof env.db]) {
-        throw new InternalServerErrorException();
-      }
+    const port = Number(process.env.POSTGRES_PORT ?? '5432');
+
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new InternalServerErrorException(
+        'POSTGRES_PORT must be an integer between 1 and 65535',
+      );
     }
-    for (const key in env.auth) {
-      if (!env.auth[key as keyof typeof env.auth]) {
-        throw new InternalServerErrorException();
-      }
+
+    const tokenSecret = required('JWT_SECRET');
+    const refreshTokenSecret = required('JWT_REFRESH_SECRET');
+
+    if (tokenSecret === refreshTokenSecret) {
+      throw new InternalServerErrorException(
+        'JWT_SECRET and JWT_REFRESH_SECRET must be different',
+      );
     }
-    this.env = env as ConfigDTO;
+
+    if (tokenSecret.length < 32 || refreshTokenSecret.length < 32) {
+      throw new InternalServerErrorException(
+        'JWT secrets must each contain at least 32 characters',
+      );
+    }
+
+    this.env = {
+      db: {
+        host: required('POSTGRES_HOST'),
+        port,
+        user: required('POSTGRES_USER'),
+        password: required('POSTGRES_PASSWORD'),
+        database: required('POSTGRES_DB'),
+      },
+      auth: {
+        tokenSecret,
+        refreshTokenSecret,
+      },
+    };
   }
 
-  public get dbConfig() {
+  get dbConfig() {
     return this.env.db;
   }
 
-  public get authConfig() {
+  get authConfig() {
     return this.env.auth;
   }
 }

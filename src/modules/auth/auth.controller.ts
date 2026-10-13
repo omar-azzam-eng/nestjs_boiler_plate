@@ -26,8 +26,7 @@ export class AuthController {
   @Get('health')
   health() {
     return {
-      ...this.configService.authConfig,
-      ...this.configService.dbConfig,
+      status: 'ok',
     };
   }
 

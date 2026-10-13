@@ -1,9 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { UserRoleEnum } from '../users/entities/user.entity';
-import type { AuthUser } from './auth.model';
+import type { AuthTokenPayload } from './auth.model';
 import { ConfigService } from 'src/config/config.service';
 
 @Injectable()
@@ -15,15 +19,29 @@ export class AuthService {
   ) {}
 
   private async generateToken(userId: string, role: UserRoleEnum) {
-    const payload: AuthUser = { id: userId, role: role };
-    const token = await this.jwtService.signAsync(payload, {
-      expiresIn: '1d',
-      secret: this.configService.authConfig.tokenSecret,
-    });
-    const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: '7d',
-      secret: this.configService.authConfig.refreshTokenSecret,
-    });
+    const accessPayload: AuthTokenPayload = {
+      id: userId,
+      role,
+      tokenType: 'access',
+    };
+
+    const refreshPayload: AuthTokenPayload = {
+      id: userId,
+      role,
+      tokenType: 'refresh',
+    };
+
+    const [token, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(accessPayload, {
+        expiresIn: '1d',
+        secret: this.configService.authConfig.tokenSecret,
+      }),
+      this.jwtService.signAsync(refreshPayload, {
+        expiresIn: '7d',
+        secret: this.configService.authConfig.refreshTokenSecret,
+      }),
+    ]);
+
     return { token, refreshToken };
   }
 
@@ -38,11 +56,25 @@ export class AuthService {
     return await this.generateToken(userId, UserRoleEnum.CUSTOMER);
   }
   async signIn(email: string, password: string) {
-    const user = await this.usersService.getUserByEmail(email);
-    if (!(await bcrypt.compare(password, user.password))) {
-      throw new NotFoundException('Your credentials are incorrect');
+    let user;
+
+    try {
+      user = await this.usersService.getUserByEmail(email);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      throw error;
     }
-    return await this.generateToken(user.id, user.role);
+
+    const passwordMatches = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatches) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    return this.generateToken(user.id, user.role);
   }
 
   async refresh(id: string, role: UserRoleEnum) {

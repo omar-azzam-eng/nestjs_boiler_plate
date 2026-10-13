@@ -1,8 +1,8 @@
 export class UserResponseDTO {
   constructor(
-    private id: string,
-    private email: string,
-    private name?: string,
-    private phone?: string,
+    public id: string,
+    public email: string,
+    public name?: string,
+    public phone?: string,
   ) {}
 }

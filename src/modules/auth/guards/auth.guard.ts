@@ -9,8 +9,9 @@ import { Request } from 'express';
 import { Reflector } from '@nestjs/core';
 import { PUBLIC_KEY } from '../decorators/public.decorator';
 import { REFRESH_KEY } from '../decorators/refresh.decorator';
-import type { AuthUser } from '../auth.model';
+import type { AuthTokenPayload } from '../auth.model';
 import { ConfigService } from 'src/config/config.service';
+import { UserRoleEnum } from 'src/modules/users/entities/user.entity';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -48,11 +49,25 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync<AuthUser>(token, {
-        secret: !isRefresh
-          ? this.configService.authConfig.tokenSecret
-          : this.configService.authConfig.refreshTokenSecret,
-      });
+      const payload = await this.jwtService.verifyAsync<AuthTokenPayload>(
+        token,
+        {
+          secret: isRefresh
+            ? this.configService.authConfig.refreshTokenSecret
+            : this.configService.authConfig.tokenSecret,
+        },
+      );
+
+      const expectedTokenType = isRefresh ? 'refresh' : 'access';
+
+      if (
+        payload.tokenType !== expectedTokenType ||
+        typeof payload.id !== 'string' ||
+        !Object.values(UserRoleEnum).includes(payload.role)
+      ) {
+        throw new UnauthorizedException();
+      }
+
       request.user = {
         id: payload.id,
         role: payload.role,

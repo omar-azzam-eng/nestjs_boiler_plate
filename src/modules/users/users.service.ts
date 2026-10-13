@@ -1,11 +1,12 @@
 import {
   BadRequestException,
-  HttpException,
+  ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, QueryFailedError, Repository } from 'typeorm';
 import { UserEntity, UserRoleEnum } from './entities/user.entity';
 import { CreateUserDTO } from './dtos/create-user.dto';
 import { UpdateUserDTO } from './dtos/update-user.dto';
@@ -28,8 +29,15 @@ export class UsersService {
     try {
       const result = await this.usersRepository.insert(user);
       return result.identifiers[0].id as string;
-    } catch {
-      throw new HttpException('Failed to create user', 400);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error.driverError as { code?: string }).code === '23505'
+      ) {
+        throw new ConflictException('Email already exists');
+      }
+
+      throw new InternalServerErrorException('Failed to create user');
     }
   }
 
@@ -65,28 +73,23 @@ export class UsersService {
   }
 
   async updateUser(id: string, data: UpdateUserDTO): Promise<UserEntity> {
-    if (Object.keys(data).length === 0) {
+    const updates = {
+      ...data,
+      ...(data.password
+        ? {
+            password: await UserEntity.hashPassword(data.password),
+          }
+        : {}),
+    };
+
+    if (Object.keys(updates).length === 0) {
       throw new BadRequestException('No data provided for update');
     }
 
-    const user = await this.usersRepository.findOne({
-      where: { id, deletedAt: IsNull() },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (data.password) {
-      data.password = await UserEntity.hashPassword(data.password);
-    }
-    await this.usersRepository.update(id, data);
-    return this.getUserById(id);
-  }
+    const user = await this.getUserById(id);
 
-  async getAdminUserIds(): Promise<string[]> {
-    const adminIds = await this.usersRepository.find({
-      where: { role: UserRoleEnum.ADMIN },
-      select: { id: true },
-    });
-    return [...new Set(adminIds.map((adminId) => adminId.id))];
+    await this.usersRepository.update(user.id, updates);
+
+    return this.getUserById(user.id);
   }
 }
