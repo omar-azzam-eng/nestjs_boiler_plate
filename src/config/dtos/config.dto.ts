@@ -22,19 +22,7 @@ class AuthConfigDTO {
   refreshTokenSecret: string;
 }
 
-class R2ConfigDTO {
-  @IsString()
-  accessKey: string;
-  @IsString()
-  secretAccessKey: string;
-  @IsUrl({ require_protocol: true, protocols: ['https'] })
-  endpoint: string;
-  @IsString()
-  bucketName: string;
-}
-
 export class ConfigDTO {
   db: DBConfigDTO;
   auth: AuthConfigDTO;
-  r2: R2ConfigDTO;
 }
