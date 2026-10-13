@@ -34,7 +34,7 @@ export class AuthController {
   }
 
   @Refresh()
-  @Post('/auth/refresh')
+  @Post('refresh')
   async refresh(@User() user: AuthUser) {
     const tokens = await this.authService.refresh(user.id, user.role);
     return tokens;

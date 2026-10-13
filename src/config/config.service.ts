@@ -29,7 +29,7 @@ export class ConfigService {
       return value;
     };
 
-    const port = Number(process.env.POSTGRES_PORT ?? '5432');
+    const port = Number(required('POSTGRES_PORT'));
 
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
       throw new InternalServerErrorException(
