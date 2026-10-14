@@ -77,14 +77,18 @@ export class UsersService {
     const definedData = Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined),
     );
+
     if (Object.keys(definedData).length === 0) {
       throw new BadRequestException('No fields provided for update');
     }
+
     const updates = {
-      ...data,
-      ...(data.password
+      ...definedData,
+      ...(definedData.password
         ? {
-            password: await UserEntity.hashPassword(data.password),
+            password: await UserEntity.hashPassword(
+              definedData.password as string,
+            ),
           }
         : {}),
     };

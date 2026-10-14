@@ -1,6 +1,7 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from './auth.guard';
+import { UserRoleEnum } from 'src/modules/users/entities/user.entity';
 
 describe('AuthGuard', () => {
   const makeContext = (authorization?: string): ExecutionContext => {
@@ -16,20 +17,68 @@ describe('AuthGuard', () => {
 
   let reflector: { getAllAndOverride: jest.Mock };
   let jwtService: { verifyAsync: jest.Mock };
-  let configService: { authConfig: { tokenSecret: string; refreshTokenSecret: string } };
+  let configService: {
+    authConfig: { tokenSecret: string; refreshTokenSecret: string };
+  };
   let guard: AuthGuard;
 
   beforeEach(() => {
     reflector = { getAllAndOverride: jest.fn().mockReturnValue(false) };
     jwtService = { verifyAsync: jest.fn() };
     configService = {
-      authConfig: { tokenSecret: 'access-secret', refreshTokenSecret: 'refresh-secret' },
+      authConfig: {
+        tokenSecret: 'access-secret',
+        refreshTokenSecret: 'refresh-secret',
+      },
     };
     guard = new AuthGuard(
       jwtService as never,
       reflector as unknown as Reflector,
       configService as never,
     );
+  });
+
+  it('rejects a token without a string user id', async () => {
+    jwtService.verifyAsync.mockResolvedValue({
+      role: 'customer',
+      tokenType: 'access',
+    });
+
+    await expect(
+      guard.canActivate(makeContext('Bearer token')),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects an unsupported role in the token', async () => {
+    jwtService.verifyAsync.mockResolvedValue({
+      id: 'u1',
+      role: 'superuser',
+      tokenType: 'access',
+    });
+
+    await expect(
+      guard.canActivate(makeContext('Bearer token')),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('verifies refresh tokens using the refresh secret', async () => {
+    reflector.getAllAndOverride.mockImplementation((key: string) => {
+      return key === 'refresh';
+    });
+
+    jwtService.verifyAsync.mockResolvedValue({
+      id: 'u1',
+      role: 'customer',
+      tokenType: 'refresh',
+    });
+
+    await expect(
+      guard.canActivate(makeContext('Bearer refresh-token')),
+    ).resolves.toBe(true);
+
+    expect(jwtService.verifyAsync).toHaveBeenCalledWith('refresh-token', {
+      secret: 'refresh-secret',
+    });
   });
 
   it('allows a public route without a token', async () => {
@@ -46,9 +95,9 @@ describe('AuthGuard', () => {
   });
 
   it('rejects malformed authorization headers', async () => {
-    await expect(guard.canActivate(makeContext('Basic abc'))).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      guard.canActivate(makeContext('Basic abc')),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('rejects an invalid JWT', async () => {
@@ -78,7 +127,12 @@ describe('AuthGuard', () => {
       tokenType: 'access',
     });
     const context = makeContext('Bearer valid-token');
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<{
+      user?: {
+        id: string;
+        role: UserRoleEnum;
+      };
+    }>();
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(request.user).toEqual({ id: 'u1', role: 'customer' });

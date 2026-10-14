@@ -19,6 +19,20 @@ describe('RolesGuard', () => {
     guard = new RolesGuard(reflector as unknown as Reflector);
   });
 
+  it('allows routes with an empty role list', () => {
+    reflector.getAllAndOverride.mockReturnValue([]);
+
+    expect(guard.canActivate(contextFor())).toBe(true);
+  });
+
+  it('rejects a user without a role when a role is required', () => {
+    reflector.getAllAndOverride.mockReturnValue([UserRoleEnum.ADMIN]);
+
+    expect(() => guard.canActivate(contextFor({ id: 'u1' }))).toThrow(
+      ForbiddenException,
+    );
+  });
+
   it('allows routes with no role metadata', () => {
     reflector.getAllAndOverride.mockReturnValue(undefined);
 
@@ -28,7 +42,9 @@ describe('RolesGuard', () => {
   it('allows a user with a required role', () => {
     reflector.getAllAndOverride.mockReturnValue([UserRoleEnum.CUSTOMER]);
 
-    expect(guard.canActivate(contextFor({ id: 'u1', role: UserRoleEnum.CUSTOMER }))).toBe(true);
+    expect(
+      guard.canActivate(contextFor({ id: 'u1', role: UserRoleEnum.CUSTOMER })),
+    ).toBe(true);
   });
 
   it('rejects a user with a different role', () => {

@@ -77,12 +77,19 @@ export class AuthService {
     return this.generateToken(user.id, user.role);
   }
 
-  async refresh(id: string, role: UserRoleEnum) {
-    const user = await this.usersService.getUserById(id);
+  async refresh(id: string) {
+    let user;
 
-    if (!user) {
-      throw new UnauthorizedException();
+    try {
+      user = await this.usersService.getUserById(id);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      throw error;
     }
-    return await this.generateToken(id, role);
+
+    return this.generateToken(user.id, user.role);
   }
 }
